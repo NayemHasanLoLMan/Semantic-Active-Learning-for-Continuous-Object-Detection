@@ -1,0 +1,194 @@
+import cv2
+import os
+import json
+import time
+from datetime import datetime
+from ultralytics import YOLO
+from pathlib import Path
+
+class WebcamCapture:
+    def __init__(self, model_path, config):
+        self.model = YOLO(model_path)
+        self.config = config
+        
+        # Create directories
+        self.pending_dir = "datasets/captured_data/pending_verification"
+        os.makedirs(f"{self.pending_dir}/images", exist_ok=True)
+        
+        # Detection metadata
+        self.detections_file = f"{self.pending_dir}/detections.json"
+        self.detections = self.load_detections()
+        
+        # Capture statistics
+        self.capture_count = 0
+        self.last_capture_time = 0
+        
+    def load_detections(self):
+        """Load existing detections."""
+        if os.path.exists(self.detections_file):
+            with open(self.detections_file, 'r') as f:
+                return json.load(f)
+        return []
+    
+    def save_detections(self):
+        """Save detections to file."""
+        with open(self.detections_file, 'w') as f:
+            json.dump(self.detections, f, indent=2)
+    
+    def should_capture(self):
+        """Check if we should capture based on interval and limits."""
+        current_time = time.time()
+        
+        # Check time interval
+        if current_time - self.last_capture_time < self.config['capture_interval']:
+            return False
+        
+        # Check max captures
+        if self.capture_count >= self.config['max_captures_per_session']:
+            return False
+        
+        return True
+    
+    def capture_detection(self, frame, boxes, confidences):
+        """Capture frame with detection information."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        image_name = f"capture_{timestamp}.jpg"
+        image_path = f"{self.pending_dir}/images/{image_name}"
+        
+        # Save image
+        cv2.imwrite(image_path, frame)
+        
+        # Save detection metadata
+        detection_info = {
+            'image_name': image_name,
+            'timestamp': timestamp,
+            'detections': []
+        }
+        
+        for box, conf in zip(boxes, confidences):
+            x1, y1, x2, y2 = box
+            detection_info['detections'].append({
+                'bbox': [float(x1), float(y1), float(x2), float(y2)],
+                'confidence': float(conf),
+                'class': 'cell phone'
+            })
+        
+        self.detections.append(detection_info)
+        self.save_detections()
+        
+        self.capture_count += 1
+        self.last_capture_time = time.time()
+        
+        print(f" Captured: {image_name} (Count: {self.capture_count})")
+        
+        return image_path
+    
+    def run(self):
+        """Run webcam capture system."""
+        print("="*60)
+        print(" Webcam Capture System")
+        print("="*60)
+        print(f"\nConfiguration:")
+        print(f"  Capture interval: {self.config['capture_interval']}s")
+        print(f"  Max captures: {self.config['max_captures_per_session']}")
+        print(f"  Min confidence: {self.config['min_confidence_for_capture']}")
+        print(f"\nControls:")
+        print("  Press 'q' to quit")
+        print("  Press 's' to skip capture")
+        print("  Press 'c' to force capture")
+        print("="*60)
+        
+        cap = cv2.VideoCapture(0)
+        
+        if not cap.isOpened():
+            print(" Error: Could not open webcam")
+            return
+        
+        print("\n Webcam started. Detecting...")
+        
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                # Run detection
+                results = self.model(frame, 
+                                    conf=self.config['min_confidence_for_capture'],
+                                    verbose=False)
+                
+                # Get detections
+                boxes = results[0].boxes.xyxy.cpu().numpy()
+                confidences = results[0].boxes.conf.cpu().numpy()
+                
+                # Draw detections
+                annotated_frame = results[0].plot()
+                
+                # Display capture status
+                status_text = f"Captures: {self.capture_count}/{self.config['max_captures_per_session']}"
+                cv2.putText(annotated_frame, status_text, (10, 30),
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                # Auto capture if conditions met
+                if len(boxes) > 0 and self.should_capture():
+                    self.capture_detection(frame, boxes, confidences)
+                    
+                    # Visual feedback
+                    cv2.rectangle(annotated_frame, (0, 0), 
+                                (annotated_frame.shape[1], annotated_frame.shape[0]),
+                                (0, 255, 0), 10)
+                
+                # Show frame
+                cv2.imshow('Cell Phone Detection - Capture System', annotated_frame)
+                
+                # Handle key presses
+                key = cv2.waitKey(1) & 0xFF
+                
+                if key == ord('q'):
+                    print("\n Stopping capture...")
+                    break
+                elif key == ord('c') and len(boxes) > 0:
+                    # Force capture
+                    self.capture_detection(frame, boxes, confidences)
+                elif key == ord('s'):
+                    # Skip next capture
+                    self.last_capture_time = time.time()
+                
+                # Auto-stop at max captures
+                if self.capture_count >= self.config['max_captures_per_session']:
+                    print(f"\n Reached maximum captures ({self.capture_count})")
+                    break
+        
+        except KeyboardInterrupt:
+            print("\n  Interrupted by user")
+        
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
+            
+            print("\n" + "="*60)
+            print(" Capture Session Summary")
+            print("="*60)
+            print(f"  Total captures: {self.capture_count}")
+            print(f"  Saved to: {self.pending_dir}/")
+            print(f"  Metadata: {self.detections_file}")
+            print("="*60)
+            print("\nNext step: Run Gemini verification")
+            print("  python scripts/3_gemini_verification.py")
+            print("="*60)
+
+if __name__ == "__main__":
+    # Configuration
+    config = {
+        'capture_interval': 2.0,
+        'min_confidence_for_capture': 0.15,
+        'max_captures_per_session': 50,
+        'save_format': 'jpg'
+    }
+    
+    # Run capture
+    capturer = WebcamCapture(
+        model_path="models/current_best.pt",
+        config=config
+    )
+    capturer.run()

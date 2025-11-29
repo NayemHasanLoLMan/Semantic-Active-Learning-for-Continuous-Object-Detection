@@ -17,6 +17,8 @@ class GeminiVerifier:
         # Configure Gemini
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(config['model'])
+
+        self.vector_db = VectorDBManager()
         
         # Directories
         self.pending_dir = "datasets/captured_data/pending_verification"

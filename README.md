@@ -386,7 +386,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 - [Gemini API Reference](https://ai.google.dev/gemini-api/docs)
 
 ### Contact
-For research inquiries or collaboration: [hasanmahmudnayeem3027@gmail.com]
+For research inquiries or collaboration: hasanmahmudnayeem3027@gmail.com
 
 ---
 

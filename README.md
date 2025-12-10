@@ -1,9 +1,14 @@
 # Multi-Category Semantic Active Learning for Continuous Object Detection
 
 ![Project Status](https://img.shields.io/badge/Status-Research%20Prototype-blue)
-![Framework](https://img.shields.io/badge/Framework-YOLO11%20%7C%20ChromaDB%20%7C%20Gemini-green)
+![Framework](https://img.shields.io/badge/Framework-YOLOv11%20%7C%20ChromaDB-green)
+![VLMs](https://img.shields.io/badge/VLMs-Gemini%20%7C%20GPT--4%20%7C%20Claude-purple)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![CUDA](https://img.shields.io/badge/CUDA-11.8%2B-orange)
+![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey)
+![mAP](https://img.shields.io/badge/Avg%20mAP-78.3%25-success)
+![Cost Reduction](https://img.shields.io/badge/Cost%20Reduction-82%25-red)
+![Deduplication](https://img.shields.io/badge/Deduplication-71.4%25-yellow)
 
 ## Abstract
 
@@ -283,7 +288,7 @@ This work builds on open-source contributions and commercial APIs that made the 
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - See [LICENSE](LICENSE) file for details.
 
 ## Contact
 
